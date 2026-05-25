@@ -1,0 +1,115 @@
+# ============================================================================
+# Docker Compose — HP Gateway Full Stack
+# ============================================================================
+# Run: docker-compose -f deployments/docker-compose.yaml up
+# ============================================================================
+
+version: "3.9"
+
+services:
+  # ==========================================================================
+  # API Gateway
+  # ==========================================================================
+  gateway:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../config/gateway.yaml:/app/config/gateway.yaml
+    depends_on:
+      - backend-alpha
+      - backend-beta
+      - backend-gamma
+      - redis
+    networks:
+      - gateway-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Test Backend Servers
+  # ==========================================================================
+  backend-alpha:
+    image: hashicorp/http-echo
+    command: ["-listen=:9001", "-text=Hello from Backend Alpha"]
+    ports:
+      - "9001:9001"
+    networks:
+      - gateway-network
+
+  backend-beta:
+    image: hashicorp/http-echo
+    command: ["-listen=:9002", "-text=Hello from Backend Beta"]
+    ports:
+      - "9002:9002"
+    networks:
+      - gateway-network
+
+  backend-gamma:
+    image: hashicorp/http-echo
+    command: ["-listen=:9003", "-text=Hello from Backend Gamma"]
+    ports:
+      - "9003:9003"
+    networks:
+      - gateway-network
+
+  # ==========================================================================
+  # Redis — Caching & Rate Limiting
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - gateway-network
+
+  # ==========================================================================
+  # PostgreSQL — Analytics & Logs
+  # ==========================================================================
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: gateway
+      POSTGRES_USER: gateway
+      POSTGRES_PASSWORD: gateway_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - gateway-network
+
+  # ==========================================================================
+  # Prometheus — Metrics Collection
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - gateway-network
+
+  # ==========================================================================
+  # Grafana — Metrics Dashboard
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    networks:
+      - gateway-network
+
+volumes:
+  redis-data:
+  postgres-data:
+
+networks:
+  gateway-network:
+    driver: bridge
