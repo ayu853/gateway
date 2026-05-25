@@ -65,7 +65,7 @@ func startBackend(b TestBackend) {
 		time.Sleep(delay)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		data, _ := json.MarshalIndent(map[string]interface{}{
 			"server":    b.Name,
 			"port":      b.Port,
 			"path":      r.URL.Path,
@@ -73,7 +73,8 @@ func startBackend(b TestBackend) {
 			"headers":   flattenHeaders(r.Header),
 			"timestamp": time.Now().Format(time.RFC3339),
 			"latency":   delay.String(),
-		})
+		}, "", "  ")
+		w.Write(data)
 	})
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
