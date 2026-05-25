@@ -1,7 +1,9 @@
 package cache
 
 import (
+	"bytes"
 	"container/list"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -182,4 +184,67 @@ type CacheStats struct {
 	Hits    int64   `json:"hits"`
 	Misses  int64   `json:"misses"`
 	HitRate float64 `json:"hit_rate_percent"`
+}
+
+// Middleware returns an HTTP middleware that caches GET responses.
+func (c *Cache) Middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Only cache GET requests
+		if !c.enabled || r.Method != http.MethodGet {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		cacheKey := r.Method + ":" + r.URL.Path
+
+		// Check cache
+		if entry, ok := c.Get(cacheKey); ok {
+			// Cache hit — serve from cache
+			for k, v := range entry.Headers {
+				w.Header().Set(k, v)
+			}
+			w.Header().Set("X-Cache", "HIT")
+			w.WriteHeader(entry.Status)
+			w.Write(entry.Value)
+			return
+		}
+
+		// Cache miss — capture the response
+		w.Header().Set("X-Cache", "MISS")
+		recorder := &cacheResponseWriter{
+			ResponseWriter: w,
+			statusCode:     200,
+			body:           &bytes.Buffer{},
+		}
+
+		next.ServeHTTP(recorder, r)
+
+		// Only cache successful responses
+		if recorder.statusCode >= 200 && recorder.statusCode < 300 {
+			headers := make(map[string]string)
+			for k, v := range recorder.Header() {
+				if len(v) > 0 {
+					headers[k] = v[0]
+				}
+			}
+			c.Set(cacheKey, recorder.body.Bytes(), headers, recorder.statusCode)
+		}
+	})
+}
+
+// cacheResponseWriter captures the response for caching.
+type cacheResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+	body       *bytes.Buffer
+}
+
+func (w *cacheResponseWriter) WriteHeader(code int) {
+	w.statusCode = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func (w *cacheResponseWriter) Write(b []byte) (int, error) {
+	w.body.Write(b)
+	return w.ResponseWriter.Write(b)
 }

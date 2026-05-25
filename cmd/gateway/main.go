@@ -87,6 +87,7 @@ func main() {
 	// Build middleware chain (executed in reverse order)
 	var handler http.Handler = reverseProxy
 	handler = circuitBreaker.Middleware(handler)
+	handler = appCache.Middleware(handler)
 	handler = auth.Middleware(handler)
 	handler = rateLimiter.Middleware(handler)
 	handler = analytics.Middleware(handler)
