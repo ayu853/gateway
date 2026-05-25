@@ -108,17 +108,19 @@ func main() {
 				"active_connections": b.GetActiveConnections(),
 			}
 		}
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		data, _ := json.MarshalIndent(map[string]interface{}{
 			"status":   "ok",
 			"backends": statuses,
-		})
+		}, "", "  ")
+		w.Write(data)
 	})
 
 	mux.Handle("/api/analytics", analytics)
 
 	mux.HandleFunc("/api/cache/stats", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(appCache.Stats())
+		data, _ := json.MarshalIndent(appCache.Stats(), "", "  ")
+		w.Write(data)
 	})
 
 	if cfg.Metrics.Enabled {

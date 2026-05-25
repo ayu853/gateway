@@ -113,7 +113,8 @@ func (c *Collector) GetStats() Stats {
 // ServeHTTP handles the analytics API endpoint.
 func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(c.GetStats())
+	data, _ := json.MarshalIndent(c.GetStats(), "", "  ")
+	w.Write(data)
 }
 
 // Stats holds analytics data.
