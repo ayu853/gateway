@@ -1,0 +1,71 @@
+# ============================================================================
+# HP Gateway — Configuration
+# ============================================================================
+# High-Performance API Gateway & Load Balancer
+# Documentation: https://github.com/anshu/gateway
+# ============================================================================
+
+server:
+  port: 8080
+  read_timeout: 15s
+  write_timeout: 15s
+  idle_timeout: 60s
+
+# Backend servers to load balance across
+backends:
+  - url: "http://localhost:9001"
+    weight: 3
+  - url: "http://localhost:9002"
+    weight: 2
+  - url: "http://localhost:9003"
+    weight: 1
+
+# Load balancing algorithm
+# Options: round-robin, least-conn, weighted-rr, ip-hash
+balancer:
+  algorithm: "round-robin"
+
+# Health check configuration
+health:
+  enabled: true
+  interval: 10s
+  timeout: 5s
+  path: "/health"
+  unhealthy_threshold: 3    # Mark unhealthy after 3 consecutive failures
+  healthy_threshold: 2      # Mark healthy after 2 consecutive successes
+
+# Rate limiting (per IP)
+rate_limit:
+  enabled: true
+  requests_per_minute: 100
+  burst: 20
+
+# Authentication
+auth:
+  enabled: false
+  jwt_secret: "your-super-secret-key-change-in-production"
+  api_keys:
+    - "test-api-key-1"
+    - "test-api-key-2"
+  exclude_paths:
+    - "/health"
+    - "/api/health"
+    - "/api/analytics"
+    - "/metrics"
+
+# Response caching
+cache:
+  enabled: true
+  ttl: 5m
+  max_size: 1000
+  redis_url: ""              # Optional: "redis://localhost:6379"
+
+# Logging
+logging:
+  level: "info"              # debug, info, warn, error
+  format: "console"          # console, json
+
+# Prometheus metrics
+metrics:
+  enabled: true
+  path: "/metrics"
