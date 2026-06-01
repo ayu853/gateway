@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -22,6 +23,23 @@ type TestBackend struct {
 }
 
 func main() {
+	// Support single-backend mode with -port flag
+	port := flag.Int("port", 0, "Run a single backend on this port")
+	name := flag.String("name", "", "Backend name")
+	flag.Parse()
+
+	if *port != 0 {
+		// Single backend mode — runs as its own process
+		n := *name
+		if n == "" {
+			n = fmt.Sprintf("backend-%d", *port)
+		}
+		log.Printf("✅ %s → http://localhost:%d", n, *port)
+		startBackend(TestBackend{Name: n, Port: *port})
+		return
+	}
+
+	// Multi-backend mode (default) — runs all 3 in one process
 	backends := []TestBackend{
 		{Name: "backend-alpha", Port: 9001},
 		{Name: "backend-beta", Port: 9002},

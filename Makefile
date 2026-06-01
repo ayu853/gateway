@@ -52,10 +52,26 @@ test:
 	@echo "🧪 Running tests..."
 	$(GOTEST) -v -race -cover ./...
 
-## backends: Start test backend servers
+## backends: Start test backend servers (each as a separate process)
 backends:
-	@echo "🖥️  Starting test backends..."
-	$(GOCMD) run scripts/test_backends.go
+	@echo "🖥️  Starting test backends as separate processes..."
+	@$(GOCMD) run scripts/test_backends.go -port 9001 -name backend-alpha &
+	@$(GOCMD) run scripts/test_backends.go -port 9002 -name backend-beta &
+	@$(GOCMD) run scripts/test_backends.go -port 9003 -name backend-gamma &
+	@sleep 2
+	@echo "=========================================="
+	@echo "  ✅ backend-alpha → http://localhost:9001"
+	@echo "  ✅ backend-beta  → http://localhost:9002"
+	@echo "  ✅ backend-gamma → http://localhost:9003"
+	@echo "=========================================="
+	@echo "  To stop: make stop-backends"
+	@echo "=========================================="
+
+## stop-backends: Stop all test backend servers
+stop-backends:
+	@echo "🛑 Stopping backends..."
+	@pkill -f "test_backends" 2>/dev/null || true
+	@echo "✅ All backends stopped"
 
 ## bench: Run benchmarks (requires 'hey' tool)
 bench:

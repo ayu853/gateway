@@ -55,7 +55,7 @@ auth:
 
 # Response caching
 cache:
-  enabled: true
+  enabled: false
   ttl: 5m
   max_size: 1000
   redis_url: ""              # Optional: "redis://localhost:6379"
